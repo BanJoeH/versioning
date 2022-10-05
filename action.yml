@@ -1,0 +1,5 @@
+name: 'MyDianomi Versioning'
+description: 'update release notes, version and commit'
+runs:
+  using: 'node16'
+  main: 'dist/index.js'
