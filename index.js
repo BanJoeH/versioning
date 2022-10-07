@@ -1,7 +1,6 @@
 /* eslint-disable no-console */
 /* eslint-disable import/no-extraneous-dependencies */
 const core = require('@actions/core');
-const shell = require('shelljs');
 const fs = require('fs');
 const conventionalRecommendedBump = require('conventional-recommended-bump');
 const git = require('./helpers/git');
@@ -15,10 +14,10 @@ async function run() {
     async (err, reccomendation) => {
       if (err) {
         console.log('error reccommending bump', err);
-        shell.exit(1);
+        core.setFailed(err.message);
       }
-      console.log('err : ', err);
-      console.log('releaseType : ', JSON.stringify(reccomendation));
+      core.info(`Reccomended bump: ${reccomendation.releaseType}`);
+      core.info(`Reason: ${reccomendation.reason}`);
       const { releaseType } = reccomendation;
       const releaseTypeMap = {
         major: 'major',
@@ -38,7 +37,7 @@ async function run() {
       const packageJson = JSON.parse(fs.readFileSync('package.json', 'utf8'));
       const OLD_VERSION = packageJson.version;
       let [major, minor, patch] = OLD_VERSION.split('.');
-      const releaseMessage = `chore: ${releaseTypeEmoji} ${releaseTypeLabelCapitalized} release`;
+
       switch (releaseType) {
         case 'major':
           major = parseInt(major, 10) + 1;
@@ -56,28 +55,37 @@ async function run() {
           break;
       }
       const NEW_VERSION = [major, minor, patch].join('.');
+      const releaseMessage = `chore: ${releaseTypeEmoji} ${releaseTypeLabelCapitalized} version ${OLD_VERSION} -> ${NEW_VERSION}`;
 
-      shell.echo(`\nOld version: ${OLD_VERSION}`);
-      shell.echo(`New version: ${NEW_VERSION}`);
+      core.info(`Old version: ${OLD_VERSION}`);
+      core.info(`New version: ${NEW_VERSION}`);
+      core.info(`Commit message: ${releaseMessage}`);
 
       // prepend version to release notes
-      const releaseNotes = fs.readFileSync('./src/release.md', 'utf8');
 
-      if (releaseNotes.startsWith(`#### v`)) {
+      const shouldUpdateReleaseNotes = OLD_VERSION !== NEW_VERSION && releaseType !== 'patch';
+      if (!shouldUpdateReleaseNotes) {
+        core.info('No need to update release notes');
+      }
+
+      const releaseNotes = fs.readFileSync('./src/release.md', 'utf8');
+      if (releaseNotes.startsWith(`#### v`) && shouldUpdateReleaseNotes) {
         const releaseNotesArray = releaseNotes.split('\n').filter(Boolean);
         const releaseNotesVersion = releaseNotesArray[0].replace('#### v', '');
-        shell.echo('\nRelease notes already have version at start');
+        core.info(`Release notes already have version at start`);
         if (releaseNotesVersion.toString() === OLD_VERSION.toString()) {
-          shell.echo('\nRelease notes version is equal to old version. Exiting.');
-          shell.exit(1);
+          core.setFailed(
+            `Release notes version matches old version, it looks like you haven't written new release notes for this feat: release`
+          );
         }
 
         if (releaseNotesVersion.toString() !== NEW_VERSION.toString()) {
-          shell.echo('\nRelease notes version is not equal to new version. Exiting.');
-          shell.echo(
-            '\nEither updated release notes version to match new version \nor remove version from release notes and this script will automagically add the correct one.'
+          core.setFailed(
+            `Release notes version is not equal to new version 
+            (i.e. i think it should be version: ${NEW_VERSION} but found : ${releaseNotesVersion} in the release notes). 
+            Either updated release notes version to match new version 
+            or remove version from release notes and this script will automagically add the correct one.`
           );
-          shell.exit(1);
         }
       }
 
@@ -86,123 +94,37 @@ async function run() {
         copyPackageJson.version = NEW_VERSION;
         fs.writeFileSync('package.json', `${JSON.stringify(copyPackageJson, null, 2)}\n`);
 
-        shell.echo('\nPackage.json version updated');
-
-        const newReleaseNotes = `#### v${NEW_VERSION}\n${releaseNotes}`;
-        fs.writeFileSync('./src/release.md', newReleaseNotes);
-
-        shell.echo('\nRelease notes updated version updated');
+        core.info(`Package.json version updated`);
+        if (shouldUpdateReleaseNotes) {
+          const newReleaseNotes = `#### v${NEW_VERSION}\n${releaseNotes}`;
+          fs.writeFileSync('./src/release.md', newReleaseNotes);
+          core.info(`Release notes updated`);
+        }
         await git.add('.');
         await git.commit(releaseMessage);
         await git.createTag(`v${NEW_VERSION}`);
         await git.push(gitBranch);
       } catch (e) {
-        shell.echo(e);
         try {
           // try to revert changes if there was an error
           fs.writeFileSync('package.json', `${JSON.stringify(packageJson, null, 2)}\n`);
-          shell.echo('\nPackage.json version reverted');
-          fs.writeFileSync('./src/release.md', releaseNotes);
-          shell.echo('\nRelease notes version reverted');
-          shell.exit(1);
+          core.info(`Reverted package.json version`);
+          if (shouldUpdateReleaseNotes) {
+            fs.writeFileSync('./src/release.md', releaseNotes);
+            core.info(`Reverted release notes`);
+          }
+
+          core.setFailed(e);
         } catch (error) {
           // if there was an error reverting changes, exit
-          shell.echo(`\nError reverting package.json and release notes changes: ${error}`);
-          shell.echo(error);
-          shell.exit(1);
+          core.info(`Error reverting changes`);
+          core.setFailed(error);
         }
       }
     }
   );
-
-  // shell.echo(`\nCommit messages:\n${commitMessages}`);
-
-  // const hasFeatureCommit = commitMessages.split('\n').some((commit) => commit.includes('feat: '));
-
-  // const hasReleaseNotesChanged = shell
-  //   .exec('git diff --name-only main...HEAD', { silent: true })
-  //   .stdout.includes('release.md');
-
-  // if (!hasFeatureCommit && !hasReleaseNotesChanged) {
-  //   shell.echo('\nNo feature commits or release notes changes found. Exiting.');
-  //   shell.exit(0);
-  // }
-
-  // if (hasFeatureCommit && !hasReleaseNotesChanged) {
-  //   shell.echo('\nFeature commits found but no release notes changes found. Exiting.');
-  //   shell.exit(1);
-  // }
-  // if (hasReleaseNotesChanged && !hasFeatureCommit) {
-  //   shell.echo('\nRelease notes changes found but no feature commits found. Exiting.');
-  //   shell.exit(1);
-  // }
-
-  // shell.echo('\nFeature commits and release notes changes found. Proceeding.');
-
-  // const packageJson = JSON.parse(fs.readFileSync('package.json', 'utf8'));
-  // const OLD_VERSION = packageJson.version;
-  // const [major, minor, patch] = OLD_VERSION.split('.');
-  // const NEW_VERSION = `${major}.${parseInt(minor, 10) + 1}.${patch}`;
-
-  // shell.echo(`\nOld version: ${OLD_VERSION}`);
-  // shell.echo(`New version: ${NEW_VERSION}`);
-
-  // prepend version to release notes
-  // const releaseNotes = fs.readFileSync('./src/release.md', 'utf8');
-
-  // if (releaseNotes.startsWith(`#### v`)) {
-  //   const releaseNotesArray = releaseNotes.split('\n').filter(Boolean);
-  //   const releaseNotesVersion = releaseNotesArray[0].replace('#### v', '');
-  //   shell.echo('\nRelease notes already have version at start');
-  //   if (releaseNotesVersion.toString() === OLD_VERSION.toString()) {
-  //     shell.echo('\nRelease notes version is equal to old version. Exiting.');
-  //     shell.exit(1);
-  //   }
-
-  //   if (releaseNotesVersion.toString() !== NEW_VERSION.toString()) {
-  //     shell.echo('\nRelease notes version is not equal to new version. Exiting.');
-  //     shell.echo(
-  //       '\nEither updated release notes version to match new version \nor remove version from release notes and this script will automagically add the correct one.'
-  //     );
-  //     shell.exit(1);
-  //   }
-  // }
-
-  // try {
-  //   const copyPackageJson = { ...packageJson };
-  //   copyPackageJson.version = NEW_VERSION;
-  //   fs.writeFileSync('package.json', `${JSON.stringify(copyPackageJson, null, 2)}\n`);
-
-  //   shell.echo('\nPackage.json version updated');
-
-  //   const newReleaseNotes = `#### v${NEW_VERSION}\n${releaseNotes}`;
-  //   fs.writeFileSync('./src/release.md', newReleaseNotes);
-
-  //   shell.echo('\nRelease notes updated version updated');
-
-  //   if (shell.exec('git commit -am "chore: update version"').code !== 0) {
-  //     shell.echo('\nError committing changes. Exiting.');
-  //     throw new Error('Error committing changes');
-  //   }
-  // } catch (e) {
-  //   shell.echo(e);
-  //   try {
-  //     // try to revert changes if there was an error
-  //     fs.writeFileSync('package.json', `${JSON.stringify(packageJson, null, 2)}\n`);
-  //     shell.echo('\nPackage.json version reverted');
-  //     fs.writeFileSync('./src/release.md', releaseNotes);
-  //     shell.echo('\nRelease notes version reverted');
-  //     shell.exit(1);
-  //   } catch (error) {
-  //     // if there was an error reverting changes, exit
-  //     shell.echo(`\nError reverting package.json and release notes changes: ${error}`);
-  //     shell.echo(error);
-  //     shell.exit(1);
-  //   }
-  // }
 }
-try {
-  run();
-} catch (error) {
-  core.setFailed(error.message);
-}
+
+run().catch((e) => {
+  core.setFailed(e);
+});
