@@ -3,8 +3,8 @@ description: 'update release notes, version and commit'
 runs:
   using: 'node16'
   main: './index.js'
-inputs:
-  github-token:
-    description: 'Github token'
-    default: ${{ github.token }}
-    required: false
+# inputs:
+  # github-token:
+  #   description: 'Github token'
+  #   default: ${{ github.token }}
+  #   required: false
