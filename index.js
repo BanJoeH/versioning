@@ -4,12 +4,10 @@ const core = require('@actions/core');
 const shell = require('shelljs');
 const fs = require('fs');
 const conventionalRecommendedBump = require('conventional-recommended-bump');
-const conventionalChangelogAngular = require('conventional-changelog-angular');
 const git = require('./helpers/git');
 
 async function run() {
   const gitBranch = core.getInput('git-branch').replace('refs/heads/', '');
-conventionalChangelogAngular()
   conventionalRecommendedBump(
     {
       preset: 'angular',
