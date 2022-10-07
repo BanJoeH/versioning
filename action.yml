@@ -3,8 +3,16 @@ description: 'update release notes, version and commit'
 runs:
   using: 'node16'
   main: './index.js'
-# inputs:
-  # github-token:
-  #   description: 'Github token'
-  #   default: ${{ github.token }}
-  #   required: false
+inputs:
+  github-token:
+    description: 'Github token'
+    default: ${{ github.token }}
+    required: false
+  git-user-name: 
+    description: 'Git user name'
+    default: 'MyDianomi'
+    required: true
+  git-user-email:
+    description: 'Git user email'
+    default: 'mydianomi@dianomi.com'
+    required: true
