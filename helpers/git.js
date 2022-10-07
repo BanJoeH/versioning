@@ -8,36 +8,43 @@ module.exports = new (class Git {
   commandsRun = [];
 
   constructor() {
-    const githubToken = core.getInput('github-token');
+    try {
 
-    // Make the Github token secret
-    core.setSecret(githubToken);
-
-    const gitUserName = core.getInput('git-user-name');
-    const gitUserEmail = core.getInput('git-user-email');
-    const gitUrl = core.getInput('git-url');
-
-    // if the env is dont-use-git then we mock exec as we are testing a workflow
-    if (ENV === 'dont-use-git') {
-      this.exec = (command) => {
-        const fullCommand = `git ${command}`;
-
-        // eslint-disable-next-line no-console
-        console.log(`Skipping "${fullCommand}" because of test env`);
-
-        if (!fullCommand.includes('git remote set-url origin')) {
-          this.commandsRun.push(fullCommand);
-        }
-      };
-    }
-
-    // Set config
-    this.config('user.name', gitUserName);
-    this.config('user.email', gitUserEmail);
-
-    // Update the origin
-    if (githubToken) {
-      this.updateOrigin(`https://x-access-token:${githubToken}@${gitUrl}/${GITHUB_REPOSITORY}.git`);
+      const githubToken = core.getInput('github-token');
+      
+      // Make the Github token secret
+      core.setSecret(githubToken);
+      
+      const gitUserName = core.getInput('git-user-name');
+      const gitUserEmail = core.getInput('git-user-email');
+      const gitUrl = core.getInput('git-url');
+      
+      // if the env is dont-use-git then we mock exec as we are testing a workflow
+      if (ENV === 'dont-use-git') {
+        this.exec = (command) => {
+          const fullCommand = `git ${command}`;
+          
+          // eslint-disable-next-line no-console
+          console.log(`Skipping "${fullCommand}" because of test env`);
+          
+          if (!fullCommand.includes('git remote set-url origin')) {
+            this.commandsRun.push(fullCommand);
+          }
+        };
+      }
+      
+      // Set config
+      this.config('user.name', gitUserName);
+      this.config('user.email', gitUserEmail);
+      
+      // Update the origin
+      // if (githubToken) {
+      //   this.updateOrigin(`https://x-access-token:${githubToken}@${gitUrl}/${GITHUB_REPOSITORY}.git`);
+      // }
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.error(e);
+      core.setFailed(e.message);
     }
   }
 
