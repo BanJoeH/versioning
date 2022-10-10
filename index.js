@@ -10,7 +10,7 @@ async function run() {
   const dryRun = core.getInput('dry-run') === 'true';
   console.log(gitBranch);
   await git.pull();
-  await git.switch(gitBranch);
+
   conventionalRecommendedBump(
     {
       preset: 'angular',

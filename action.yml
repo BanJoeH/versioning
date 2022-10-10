@@ -8,7 +8,7 @@ inputs:
     description: 'Github token'
     default: ${{ github.token }}
     required: false
-  git-user-name: 
+  git-user-name:
     description: 'Git user name'
     default: 'MyDianomi'
     required: true
@@ -22,5 +22,9 @@ inputs:
     required: false
   git-branch:
     description: 'Git branch'
-    default: 'main'
+    default: ${{ github.ref }}
+    required: false
+  git-url:
+    description: 'Git Url'
+    default: 'github.com'
     required: false

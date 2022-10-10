@@ -38,9 +38,9 @@ module.exports = new (class Git {
       this.config('user.email', gitUserEmail);
       
       // Update the origin
-      // if (githubToken) {
-      //   this.updateOrigin(`https://x-access-token:${githubToken}@${gitUrl}/${GITHUB_REPOSITORY}.git`);
-      // }
+      if (githubToken) {
+        this.updateOrigin(`https://x-access-token:${githubToken}@${gitUrl}/${GITHUB_REPOSITORY}.git`);
+      }
     } catch (e) {
       // eslint-disable-next-line no-console
       console.error(e);
