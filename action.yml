@@ -16,3 +16,7 @@ inputs:
     description: 'Git user email'
     default: 'mydianomi@dianomi.com'
     required: true
+  dry-run:
+    description: 'Dry run'
+    default: 'false'
+    required: false

@@ -7,6 +7,7 @@ const git = require('./helpers/git');
 
 async function run() {
   const gitBranch = core.getInput('git-branch').replace('refs/heads/', '');
+  const dryRun = core.getInput('dry-run') === 'true';
   conventionalRecommendedBump(
     {
       preset: 'angular',
@@ -88,38 +89,41 @@ async function run() {
           );
         }
       }
-
-      try {
-        const copyPackageJson = { ...packageJson };
-        copyPackageJson.version = NEW_VERSION;
-        fs.writeFileSync('package.json', `${JSON.stringify(copyPackageJson, null, 2)}\n`);
-
-        core.info(`Package.json version updated`);
-        if (shouldUpdateReleaseNotes) {
-          const newReleaseNotes = `#### v${NEW_VERSION}\n${releaseNotes}`;
-          fs.writeFileSync('./src/release.md', newReleaseNotes);
-          core.info(`Release notes updated`);
-        }
-        await git.add('.');
-        await git.commit(releaseMessage);
-        await git.createTag(`v${NEW_VERSION}`);
-        await git.push(gitBranch);
-      } catch (e) {
+      if (!dryRun) {
         try {
-          // try to revert changes if there was an error
-          fs.writeFileSync('package.json', `${JSON.stringify(packageJson, null, 2)}\n`);
-          core.info(`Reverted package.json version`);
-          if (shouldUpdateReleaseNotes) {
-            fs.writeFileSync('./src/release.md', releaseNotes);
-            core.info(`Reverted release notes`);
-          }
+          const copyPackageJson = { ...packageJson };
+          copyPackageJson.version = NEW_VERSION;
+          fs.writeFileSync('package.json', `${JSON.stringify(copyPackageJson, null, 2)}\n`);
 
-          core.setFailed(e);
-        } catch (error) {
-          // if there was an error reverting changes, exit
-          core.info(`Error reverting changes`);
-          core.setFailed(error);
+          core.info(`Package.json version updated`);
+          if (shouldUpdateReleaseNotes) {
+            const newReleaseNotes = `#### v${NEW_VERSION}\n${releaseNotes}`;
+            fs.writeFileSync('./src/release.md', newReleaseNotes);
+            core.info(`Release notes updated`);
+          }
+          await git.add('.');
+          await git.commit(releaseMessage);
+          await git.createTag(`v${NEW_VERSION}`);
+          await git.push(gitBranch);
+        } catch (e) {
+          try {
+            // try to revert changes if there was an error
+            fs.writeFileSync('package.json', `${JSON.stringify(packageJson, null, 2)}\n`);
+            core.info(`Reverted package.json version`);
+            if (shouldUpdateReleaseNotes) {
+              fs.writeFileSync('./src/release.md', releaseNotes);
+              core.info(`Reverted release notes`);
+            }
+
+            core.setFailed(e);
+          } catch (error) {
+            // if there was an error reverting changes, exit
+            core.info(`Error reverting changes`);
+            core.setFailed(error);
+          }
         }
+      } else {
+        core.info(`Dry run, not committing`);
       }
     }
   );
