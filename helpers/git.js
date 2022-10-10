@@ -88,6 +88,14 @@ module.exports = new (class Git {
   config = (prop, value) => this.exec(`config ${prop} "${value}"`);
 
   /**
+   * Switch to (and create if not already exists) branch
+   * 
+   * @param  branchName 
+   * @return {Promise<>}
+   */
+  switch = (branchName) => this.exec(`switch -c ${branchName}`)
+
+  /**
    * Add a file to commit
    *
    * @param file

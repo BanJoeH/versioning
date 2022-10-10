@@ -20,3 +20,7 @@ inputs:
     description: 'Dry run'
     default: 'false'
     required: false
+  git-branch:
+    description: 'Git branch'
+    default: 'main'
+    required: false
