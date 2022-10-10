@@ -93,7 +93,7 @@ module.exports = new (class Git {
    * @param  branchName 
    * @return {Promise<>}
    */
-  switch = (branchName) => this.exec(`switch -c ${branchName}`)
+  switch = (branchName) => this.exec(`switch ${branchName}`)
 
   /**
    * Add a file to commit
