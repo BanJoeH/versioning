@@ -128,6 +128,7 @@ module.exports = new (class Git {
     }
 
     args.push('--tags');
+    args.push('--ff-only');
     args.push(core.getInput('git-pull-method'));
 
     return this.exec(args.join(' '));
