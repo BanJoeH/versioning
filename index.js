@@ -7,7 +7,7 @@ const git = require('./helpers/git');
 
 async function run() {
   const gitBranch = core.getInput('git-branch').replace('refs/heads/', '');
-  const dryRun = core.getInput('dry-run') === 'true';
+  const dryRun = core.getBooleanInput('dry-run');
   console.log(gitBranch);
   await git.pull();
 

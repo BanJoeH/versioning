@@ -39,6 +39,8 @@ module.exports = new (class Git {
       
       // Update the origin
       if (githubToken) {
+        console.log("Updating origin to use token");
+        console.log(`https://x-access-token:${githubToken}@${gitUrl}/${GITHUB_REPOSITORY}.git`)
         this.updateOrigin(`https://x-access-token:${githubToken}@${gitUrl}/${GITHUB_REPOSITORY}.git`);
       }
     } catch (e) {
