@@ -8,6 +8,7 @@ const git = require('./helpers/git');
 async function run() {
   const gitBranch = core.getInput('git-branch').replace('refs/heads/', '');
   const dryRun = core.getInput('dry-run') === 'true';
+  await git.pull();
   conventionalRecommendedBump(
     {
       preset: 'angular',
