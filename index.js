@@ -128,6 +128,9 @@ async function run() {
       } else {
         core.info(`Dry run, not committing`);
       }
+      core.setOutput('version', NEW_VERSION);
+      core.setOutput('release-message', releaseMessage);
+      core.setOutput('committed', !dryRun);
     }
   );
 }

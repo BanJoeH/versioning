@@ -28,3 +28,10 @@ inputs:
     description: 'Git Url'
     default: 'github.com'
     required: false
+outputs:
+  version: 
+    description: 'New version to be applied to package.json and release.md'
+  release-message:
+    description: 'Commit message'
+  committed:
+    description: 'True if commit was made'
