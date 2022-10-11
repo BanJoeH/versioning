@@ -9,7 +9,7 @@ async function run() {
   const gitBranch = core.getInput('git-branch').replace('refs/heads/', '');
   const dryRun = core.getBooleanInput('dry-run');
   console.log(gitBranch);
-  await git.pull();
+  await git.fetch();
 
   conventionalRecommendedBump(
     {

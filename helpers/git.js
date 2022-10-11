@@ -134,6 +134,11 @@ module.exports = new (class Git {
     return this.exec(args.join(' '));
   };
 
+  fetch = async () => {
+    const args = ['fetch'];
+    return this.exec(args.join(' '));
+  }
+
   /**
    * Push all changes
    *
