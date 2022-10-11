@@ -9,39 +9,38 @@ module.exports = new (class Git {
 
   constructor() {
     try {
-
       const githubToken = core.getInput('github-token');
-      
+
       // Make the Github token secret
       core.setSecret(githubToken);
-      
+
       const gitUserName = core.getInput('git-user-name');
       const gitUserEmail = core.getInput('git-user-email');
       const gitUrl = core.getInput('git-url');
-      
+
       // if the env is dont-use-git then we mock exec as we are testing a workflow
       if (ENV === 'dont-use-git') {
         this.exec = (command) => {
           const fullCommand = `git ${command}`;
-          
+
           // eslint-disable-next-line no-console
           console.log(`Skipping "${fullCommand}" because of test env`);
-          
+
           if (!fullCommand.includes('git remote set-url origin')) {
             this.commandsRun.push(fullCommand);
           }
         };
       }
-      
+
       // Set config
       this.config('user.name', gitUserName);
       this.config('user.email', gitUserEmail);
-      
+
       // Update the origin
       if (githubToken) {
-        console.log("Updating origin to use token");
-        console.log(`https://x-access-token:${githubToken}@${gitUrl}/${GITHUB_REPOSITORY}.git`)
-        this.updateOrigin(`https://x-access-token:${githubToken}@${gitUrl}/${GITHUB_REPOSITORY}.git`);
+        this.updateOrigin(
+          `https://x-access-token:${githubToken}@${gitUrl}/${GITHUB_REPOSITORY}.git`
+        );
       }
     } catch (e) {
       // eslint-disable-next-line no-console
@@ -91,11 +90,11 @@ module.exports = new (class Git {
 
   /**
    * Switch to branch
-   * 
-   * @param  branchName 
+   *
+   * @param  branchName
    * @return {Promise<>}
    */
-  switch = (branchName) => this.exec(`switch ${branchName}`)
+  switch = (branchName) => this.exec(`switch ${branchName}`);
 
   /**
    * Add a file to commit
@@ -134,10 +133,15 @@ module.exports = new (class Git {
     return this.exec(args.join(' '));
   };
 
+  /**
+   * Fetch the full history
+   *
+   * @return {Promise<>}
+   */
   fetch = async () => {
-    const args = ['fetch'];
+    const args = ['fetch', '--quiet'];
     return this.exec(args.join(' '));
-  }
+  };
 
   /**
    * Push all changes
