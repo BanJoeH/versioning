@@ -7,7 +7,7 @@ const git = require('./helpers/git');
 
 async function run() {
   let gitBranch = core.getInput('git-branch');
-  console.log(await git.core(`rev-parse --abbrev-ref HEAD`));
+  console.log(await git.exec(`rev-parse --abbrev-ref HEAD`));
   gitBranch = gitBranch.replace('refs/heads/', '');
   const dryRun = core.getBooleanInput('dry-run');
   await git.fetch();
