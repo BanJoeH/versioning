@@ -6,7 +6,9 @@ const conventionalRecommendedBump = require('conventional-recommended-bump');
 const git = require('./helpers/git');
 
 async function run() {
-  const gitBranch = core.getInput('git-branch').replace('refs/heads/', '');
+  let gitBranch = core.getInput('git-branch');
+  console.log(`Git branch: ${gitBranch}`);
+  gitBranch = gitBranch.replace('refs/heads/', '');
   const dryRun = core.getBooleanInput('dry-run');
   await git.fetch();
 
