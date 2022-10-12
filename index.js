@@ -15,6 +15,7 @@ async function run() {
   conventionalRecommendedBump(
     {
       preset: 'angular',
+
     },
     async (err, reccomendation) => {
       if (err) {
@@ -101,7 +102,7 @@ async function run() {
 
           core.info(`Package.json version updated`);
           if (shouldUpdateReleaseNotes) {
-            const newReleaseNotes = `#### v${NEW_VERSION}\n${releaseNotes}`;
+            const newReleaseNotes = `#### v${NEW_VERSION}\n\n${releaseNotes}`;
             fs.writeFileSync('./src/release.md', newReleaseNotes);
             core.info(`Release notes updated`);
           }
