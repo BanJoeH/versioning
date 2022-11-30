@@ -115,6 +115,8 @@ async function run() {
           try {
             // try to revert changes if there was an error
             fs.writeFileSync('package.json', `${JSON.stringify(packageJson, null, 2)}\n`);
+            await exec('npm', ['install']);
+
             core.info(`Reverted package.json version`);
             if (shouldUpdateReleaseNotes) {
               fs.writeFileSync('./src/release.md', releaseNotes);
