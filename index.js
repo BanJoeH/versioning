@@ -4,6 +4,7 @@ const core = require('@actions/core');
 const fs = require('fs');
 const conventionalRecommendedBump = require('conventional-recommended-bump');
 const git = require('./helpers/git');
+const exec = require('@actions/exec');
 
 async function run() {
   let gitBranch = core.getInput('git-branch');
@@ -15,7 +16,6 @@ async function run() {
   conventionalRecommendedBump(
     {
       preset: 'angular',
-
     },
     async (err, reccomendation) => {
       if (err) {
@@ -99,8 +99,9 @@ async function run() {
           const copyPackageJson = { ...packageJson };
           copyPackageJson.version = NEW_VERSION;
           fs.writeFileSync('package.json', `${JSON.stringify(copyPackageJson, null, 2)}\n`);
-
           core.info(`Package.json version updated`);
+          await exec('npm', ['install']);
+          core.info(`NPM install ran`);
           if (shouldUpdateReleaseNotes) {
             const newReleaseNotes = `#### v${NEW_VERSION}\n\n\n${releaseNotes}`;
             fs.writeFileSync('./src/release.md', newReleaseNotes);
