@@ -20,6 +20,10 @@ inputs:
     description: 'Dry run'
     default: 'false'
     required: false
+  comment-on-failure:
+    description: 'Post or update a pull request comment when versioning validation fails'
+    default: 'true'
+    required: false
   git-branch:
     description: 'Git branch'
     default: ${{ github.ref }}

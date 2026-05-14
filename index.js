@@ -13,7 +13,15 @@ const {
   shouldUpdateReleaseNotes,
   validateReleaseNotes,
   formatReleaseMessage,
+  formatFailureComment,
+  FAILURE_COMMENT_MARKER,
 } = require('./helpers/release');
+
+const runContext = {
+  recommendedReleaseType: 'unknown',
+  selectedReleaseType: 'unknown',
+  labelNames: [],
+};
 
 function getRecommendedBump() {
   return new Promise((resolve, reject) => {
@@ -74,6 +82,60 @@ async function getPullRequestLabelNames() {
   }
 }
 
+async function upsertFailureComment(error) {
+  if (!core.getBooleanInput('comment-on-failure')) {
+    return;
+  }
+
+  const pullRequest = github.context.payload.pull_request;
+  if (!pullRequest) {
+    core.info('No pull request context available, skipping failure comment');
+    return;
+  }
+
+  const githubToken = core.getInput('github-token');
+  if (!githubToken) {
+    core.info('No GitHub token available, skipping failure comment');
+    return;
+  }
+
+  try {
+    const octokit = github.getOctokit(githubToken);
+    const { owner, repo } = github.context.repo;
+    const body = formatFailureComment(error.message || error.toString(), runContext);
+    const commentsResponse = await octokit.rest.issues.listComments({
+      owner,
+      repo,
+      issue_number: pullRequest.number,
+      per_page: 100,
+    });
+    const existingComment = commentsResponse.data.find((comment) =>
+      (comment.body || '').includes(FAILURE_COMMENT_MARKER)
+    );
+
+    if (existingComment) {
+      await octokit.rest.issues.updateComment({
+        owner,
+        repo,
+        comment_id: existingComment.id,
+        body,
+      });
+      core.info('Updated versioning failure comment');
+      return;
+    }
+
+    await octokit.rest.issues.createComment({
+      owner,
+      repo,
+      issue_number: pullRequest.number,
+      body,
+    });
+    core.info('Created versioning failure comment');
+  } catch (commentError) {
+    core.warning(`Could not create versioning failure comment: ${commentError.message}`);
+  }
+}
+
 async function run() {
   let gitBranch = core.getInput('git-branch');
   // console.log(await git.exec(`rev-parse --abbrev-ref HEAD`));
@@ -82,14 +144,17 @@ async function run() {
   // await git.fetch();
 
   const recommendation = await getRecommendedBump();
+  runContext.recommendedReleaseType = recommendation.releaseType || 'patch';
   core.info(`Recommended bump: ${recommendation.releaseType || 'patch'}`);
   core.info(`Reason: ${recommendation.reason || 'No conventional bump found; using patch'}`);
 
   const labelNames = await getPullRequestLabelNames();
+  runContext.labelNames = labelNames;
   core.info(`Pull request labels: ${labelNames.length ? labelNames.join(', ') : 'none'}`);
 
   const releaseDecision = resolveReleaseType(recommendation.releaseType, labelNames);
   const { releaseType } = releaseDecision;
+  runContext.selectedReleaseType = releaseType;
 
   if (releaseDecision.source === 'label') {
     core.info(`Release override label found: ${releaseDecision.label}`);
@@ -117,6 +182,10 @@ async function run() {
     const releaseNotesError = validateReleaseNotes(releaseNotes, OLD_VERSION, NEW_VERSION);
 
     if (releaseNotesError) {
+      core.error(releaseNotesError);
+      core.notice(
+        'If this bump came from an accidental commit message, add `release:patch` to the PR and rerun the workflow.'
+      );
       throw new Error(releaseNotesError);
     }
 
@@ -172,6 +241,7 @@ async function run() {
   core.setOutput('committed', !dryRun);
 }
 
-run().catch((e) => {
+run().catch(async (e) => {
+  await upsertFailureComment(e);
   core.setFailed(e.message || e);
 });

@@ -18,6 +18,8 @@ const OVERRIDE_LABELS = {
   'release:patch': 'patch',
 };
 
+const FAILURE_COMMENT_MARKER = '<!-- mydianomi-versioning-failure -->';
+
 function normalizeLabel(label) {
   return label.trim().toLowerCase();
 }
@@ -128,7 +130,32 @@ function formatReleaseMessage(releaseType, oldVersion, newVersion) {
   return `chore: ${RELEASE_TYPE_EMOJIS[releaseType]} ${RELEASE_TYPE_LABELS[releaseType]} version ${oldVersion} -> ${newVersion}`;
 }
 
+function formatFailureComment(errorMessage, context = {}) {
+  const {
+    recommendedReleaseType = 'unknown',
+    selectedReleaseType = 'unknown',
+    labelNames = [],
+  } = context;
+  const labels = labelNames.length ? labelNames.join(', ') : 'none';
+
+  return `${FAILURE_COMMENT_MARKER}
+### Versioning check failed
+
+${errorMessage}
+
+**Release decision**
+- Recommended bump: \`${recommendedReleaseType}\`
+- Selected bump: \`${selectedReleaseType}\`
+- PR labels: \`${labels}\`
+
+For accidental conventional commit messages, add one release override label to the PR:
+\`release:patch\`, \`release:minor\`, or \`release:major\`.
+
+If this is a minor or major release, update \`src/release.md\` for the selected version.`;
+}
+
 module.exports = {
+  FAILURE_COMMENT_MARKER,
   getLabelNamesFromPullRequest,
   getReleaseOverride,
   incrementVersion,
@@ -136,4 +163,5 @@ module.exports = {
   shouldUpdateReleaseNotes,
   validateReleaseNotes,
   formatReleaseMessage,
+  formatFailureComment,
 };

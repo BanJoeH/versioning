@@ -7,6 +7,8 @@ const {
   shouldUpdateReleaseNotes,
   validateReleaseNotes,
   formatReleaseMessage,
+  formatFailureComment,
+  FAILURE_COMMENT_MARKER,
 } = require('../helpers/release');
 
 test('release label overrides conventional recommendation', () => {
@@ -74,4 +76,19 @@ test('release note validation rejects old or mismatched version headings', () =>
 
 test('release message matches existing action format', () => {
   assert.equal(formatReleaseMessage('patch', '1.2.3', '1.2.4'), 'chore: 🐛 Patch version 1.2.3 -> 1.2.4');
+});
+
+test('failure comment explains release decision and override labels', () => {
+  const comment = formatFailureComment('Release notes are missing', {
+    recommendedReleaseType: 'minor',
+    selectedReleaseType: 'minor',
+    labelNames: ['bug'],
+  });
+
+  assert.match(comment, new RegExp(FAILURE_COMMENT_MARKER));
+  assert.match(comment, /Versioning check failed/);
+  assert.match(comment, /Release notes are missing/);
+  assert.match(comment, /Recommended bump: `minor`/);
+  assert.match(comment, /Selected bump: `minor`/);
+  assert.match(comment, /release:patch/);
 });
