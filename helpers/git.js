@@ -4,6 +4,14 @@ const exec = require('@actions/exec');
 
 const { GITHUB_REPOSITORY, ENV } = process.env;
 
+function normalizeArgs(args) {
+  if (Array.isArray(args)) {
+    return args.filter(Boolean);
+  }
+
+  return args.split(' ').filter(Boolean);
+}
+
 module.exports = new (class Git {
   commandsRun = [];
 
@@ -11,17 +19,14 @@ module.exports = new (class Git {
     try {
       const githubToken = core.getInput('github-token');
 
-      // Make the Github token secret
-      core.setSecret(githubToken);
-
       const gitUserName = core.getInput('git-user-name');
       const gitUserEmail = core.getInput('git-user-email');
       const gitUrl = core.getInput('git-url');
 
       // if the env is dont-use-git then we mock exec as we are testing a workflow
       if (ENV === 'dont-use-git') {
-        this.exec = (command) => {
-          const fullCommand = `git ${command}`;
+        this.exec = async (args) => {
+          const fullCommand = `git ${normalizeArgs(args).join(' ')}`;
 
           // eslint-disable-next-line no-console
           console.log(`Skipping "${fullCommand}" because of test env`);
@@ -38,6 +43,8 @@ module.exports = new (class Git {
 
       // Update the origin
       if (githubToken) {
+        // Make the Github token secret
+        core.setSecret(githubToken);
         this.updateOrigin(
           `https://x-access-token:${githubToken}@${gitUrl}/${GITHUB_REPOSITORY}.git`
         );
@@ -56,10 +63,11 @@ module.exports = new (class Git {
    * @return {Promise<>}
    */
   // eslint-disable-next-line class-methods-use-this, no-async-promise-executor
-  exec = (command) =>
+  exec = (args) =>
     // eslint-disable-next-line no-async-promise-executor
     new Promise(async (resolve, reject) => {
       let execOutput = '';
+      const gitArgs = normalizeArgs(args);
 
       const options = {
         listeners: {
@@ -69,13 +77,13 @@ module.exports = new (class Git {
         },
       };
 
-      const exitCode = await exec.exec(`git ${command}`, null, options);
+      const exitCode = await exec.exec('git', gitArgs, options);
 
       if (exitCode === 0) {
         resolve(execOutput);
       } else {
         // eslint-disable-next-line prefer-promise-reject-errors
-        reject(`Command "git ${command}" exited with code ${exitCode}.`);
+        reject(`Command "git ${gitArgs.join(' ')}" exited with code ${exitCode}.`);
       }
     });
 
@@ -86,7 +94,7 @@ module.exports = new (class Git {
    * @param value
    * @return {Promise<>}
    */
-  config = (prop, value) => this.exec(`config ${prop} "${value}"`);
+  config = (prop, value) => this.exec(['config', prop, value]);
 
   /**
    * Switch to branch
@@ -94,7 +102,7 @@ module.exports = new (class Git {
    * @param  branchName
    * @return {Promise<>}
    */
-  switch = (branchName) => this.exec(`switch ${branchName}`);
+  switch = (branchName) => this.exec(['switch', branchName]);
 
   /**
    * Add a file to commit
@@ -102,7 +110,7 @@ module.exports = new (class Git {
    * @param file
    * @returns {*}
    */
-  add = (file) => this.exec(`add ${file}`);
+  add = (file) => this.exec(['add', file]);
 
   /**
    * Commit all changes
@@ -111,7 +119,7 @@ module.exports = new (class Git {
    *
    * @return {Promise<>}
    */
-  commit = (message) => this.exec(`commit -m "${message}"`);
+  commit = (message) => this.exec(['commit', '-m', message]);
 
   /**
    * Pull the full history
@@ -128,9 +136,12 @@ module.exports = new (class Git {
 
     args.push('--tags');
     args.push('--ff-only');
-    args.push(core.getInput('git-pull-method'));
+    const gitPullMethod = core.getInput('git-pull-method');
+    if (gitPullMethod) {
+      args.push(gitPullMethod);
+    }
 
-    return this.exec(args.join(' '));
+    return this.exec(args);
   };
 
   /**
@@ -140,7 +151,7 @@ module.exports = new (class Git {
    */
   fetch = async () => {
     const args = ['fetch', '--quiet'];
-    return this.exec(args.join(' '));
+    return this.exec(args);
   };
 
   /**
@@ -148,7 +159,7 @@ module.exports = new (class Git {
    *
    * @return {Promise<>}
    */
-  push = (branch) => this.exec(`push origin ${branch} --follow-tags`);
+  push = (branch) => this.exec(['push', 'origin', branch, '--follow-tags']);
 
   /**
    * Check if the repo is shallow
@@ -160,7 +171,7 @@ module.exports = new (class Git {
       return false;
     }
 
-    const isShallow = await this.exec('rev-parse --is-shallow-repository');
+    const isShallow = await this.exec(['rev-parse', '--is-shallow-repository']);
 
     return isShallow.trim().replace('\n', '') === 'true';
   };
@@ -171,7 +182,7 @@ module.exports = new (class Git {
    * @param repo
    * @return {Promise<>}
    */
-  updateOrigin = (repo) => this.exec(`remote set-url origin ${repo}`);
+  updateOrigin = (repo) => this.exec(['remote', 'set-url', 'origin', repo]);
 
   /**
    * Creates git tag
@@ -179,7 +190,7 @@ module.exports = new (class Git {
    * @param tag
    * @return {Promise<>}
    */
-  createTag = (tag) => this.exec(`tag -a ${tag} -m "${tag}"`);
+  createTag = (tag) => this.exec(['tag', '-a', tag, '-m', tag]);
 
   /**
    * Validates the commands run

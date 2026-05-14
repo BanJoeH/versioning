@@ -1,11 +1,11 @@
 name: 'MyDianomi Versioning'
 description: 'update release notes, version and commit'
 runs:
-  using: 'node16'
+  using: 'node20'
   main: './index.js'
 inputs:
   github-token:
-    description: 'Github token'
+    description: 'Github token used to push version changes and look up pull request labels'
     default: ${{ github.token }}
     required: false
   git-user-name:
