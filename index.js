@@ -5,7 +5,7 @@ const fs = require('fs');
 const conventionalRecommendedBump = require('conventional-recommended-bump');
 const github = require('@actions/github');
 const git = require('./helpers/git');
-const exec = require('@actions/exec');
+const { readPackageJson, patchPackageVersion, restorePackageVersion } = require('./helpers/package-version');
 const {
   getLabelNamesFromPullRequest,
   incrementVersion,
@@ -164,7 +164,7 @@ async function run() {
     core.info('No conventional bump found; defaulting to patch');
   }
 
-  const packageJson = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+  const packageJson = readPackageJson();
   const OLD_VERSION = packageJson.version;
   const NEW_VERSION = incrementVersion(OLD_VERSION, releaseType);
   const releaseMessage = formatReleaseMessage(releaseType, OLD_VERSION, NEW_VERSION);
@@ -196,12 +196,11 @@ async function run() {
 
   if (!dryRun) {
     try {
-      const copyPackageJson = { ...packageJson };
-      copyPackageJson.version = NEW_VERSION;
-      fs.writeFileSync('package.json', `${JSON.stringify(copyPackageJson, null, 2)}\n`);
-      core.info(`Package.json version updated`);
-      await exec.exec('npm', ['install']);
-      core.info(`NPM install ran`);
+      const { lockfileUpdated } = patchPackageVersion(NEW_VERSION, { packageJson });
+      core.info(`package.json version updated`);
+      if (lockfileUpdated) {
+        core.info(`package-lock.json version updated`);
+      }
       if (shouldPrependReleaseNotesVersion) {
         const newReleaseNotes = `#### v${NEW_VERSION}\n\n\n${releaseNotes}`;
         fs.writeFileSync('./src/release.md', newReleaseNotes);
@@ -216,10 +215,8 @@ async function run() {
     } catch (e) {
       try {
         // try to revert changes if there was an error
-        fs.writeFileSync('package.json', `${JSON.stringify(packageJson, null, 2)}\n`);
-        await exec.exec('npm', ['install']);
-
-        core.info(`Reverted package.json version`);
+        restorePackageVersion(packageJson);
+        core.info(`Reverted package.json and lockfile versions`);
         if (shouldPrependReleaseNotesVersion) {
           fs.writeFileSync('./src/release.md', releaseNotes);
           core.info(`Reverted release notes`);

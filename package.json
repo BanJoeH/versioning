@@ -1,11 +1,16 @@
 {
   "name": "versioning",
-  "version": "2.0.0",
+  "version": "0.1.12",
   "description": "",
   "main": "index.js",
   "scripts": {
     "test": "node --test",
-    "build": "ncc build index.js"
+    "build": "ncc build index.js",
+    "version:patch": "node scripts/bump-version.js patch",
+    "version:minor": "node scripts/bump-version.js minor",
+    "version:major": "node scripts/bump-version.js major",
+    "release": "bash scripts/release.sh",
+    "release:dry-run": "bash scripts/release.sh --dry-run"
   },
   "repository": {
     "type": "git",
