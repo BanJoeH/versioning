@@ -200,7 +200,7 @@ async function run() {
       copyPackageJson.version = NEW_VERSION;
       fs.writeFileSync('package.json', `${JSON.stringify(copyPackageJson, null, 2)}\n`);
       core.info(`Package.json version updated`);
-      await exec('npm', ['install']);
+      await exec.exec('npm', ['install']);
       core.info(`NPM install ran`);
       if (shouldPrependReleaseNotesVersion) {
         const newReleaseNotes = `#### v${NEW_VERSION}\n\n\n${releaseNotes}`;
@@ -217,7 +217,7 @@ async function run() {
       try {
         // try to revert changes if there was an error
         fs.writeFileSync('package.json', `${JSON.stringify(packageJson, null, 2)}\n`);
-        await exec('npm', ['install']);
+        await exec.exec('npm', ['install']);
 
         core.info(`Reverted package.json version`);
         if (shouldPrependReleaseNotesVersion) {
